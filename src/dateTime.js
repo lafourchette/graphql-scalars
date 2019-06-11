@@ -1,9 +1,11 @@
 import { GraphQLScalarType, GraphQLError, Kind  } from "graphql"
 import * as Joi from "@hapi/joi"
 
+const isValidDateTime = new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(([+-]\d\d:\d\d)|Z)?$/i);
+
 const validate = value => {
-  Joi.assert(value, Joi.date().iso(), new TypeError(`Value is not a valid Date: ${value}`))
-  return value
+  Joi.assert(new Date(Date.parse(value)), Joi.date().iso(), new TypeError(`Value is not a valid Date: ${value}`))
+  return value;
 }
 
 export const DateTimeScalar = `scalar DateTime`
@@ -11,20 +13,14 @@ export const DateTimeScalar = `scalar DateTime`
 export const DateTime = new GraphQLScalarType({
   name: `DateTime`,
 
-  description: `Use JavaScript Date object for date/time fields.`,
+  description: `String of ISO-8601 date compliant.`,
 
   serialize(value) {
-    const date = (typeof value === `string`) ? new Date(Date.parse(value)) : value
-
-    validate(date)
-
-    return date.toJSON()
+    return validate(value)
   },
 
   parseValue(value) {
-    const date = new Date(value)
-
-    return validate(date)
+    return validate(value)
   },
 
   parseLiteral({ kind, value }) {
@@ -32,12 +28,10 @@ export const DateTime = new GraphQLScalarType({
       throw new GraphQLError(`Can only parse strings to dates but got a: ${kind}`)
     }
 
-    const date = new Date(value)
-
-    if (value !== date.toJSON()) {
+    if (!isValidDateTime.test(value)) {
       throw new GraphQLError(`Value is not a valid Date format (YYYY-MM-DDTHH:MM:SS.SSSZ): ${value}`)
     }
 
-    return validate(date)
+    return validate(value)
   }
 })
